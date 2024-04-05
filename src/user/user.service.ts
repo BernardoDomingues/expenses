@@ -1,26 +1,34 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { User } from './entities/user.entity';
+import { Repository } from 'typeorm';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class UserService {
-  create(createUserDto: CreateUserDto) {
-    return 'This action adds a new user';
-  }
+  constructor(
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+  ) {}
 
-  findAll() {
-    return `This action returns all user`;
-  }
+  async create({ username, email, password }: CreateUserDto) {
+    const existingUser = await this.userRepository.findOne({
+      where: { email },
+    });
 
-  findOne(id: number) {
-    return `This action returns a #${id} user`;
-  }
+    if (existingUser) {
+      throw new ConflictException('Email já cadastrado!');
+    }
 
-  update(id: number, updateUserDto: UpdateUserDto) {
-    return `This action updates a #${id} user`;
-  }
+    const bcryptedPassword = await bcrypt.hash(password, 10);
 
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+    const user = this.userRepository.create({
+      username,
+      email,
+      password: bcryptedPassword,
+    });
+
+    return this.userRepository.save(user);
   }
 }

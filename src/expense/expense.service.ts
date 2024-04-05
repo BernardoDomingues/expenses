@@ -1,26 +1,66 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Expense } from './entities/expense.entity';
+import { Repository } from 'typeorm';
+import { User } from 'src/user/entities/user.entity';
+import * as dayjs from 'dayjs';
 
 @Injectable()
 export class ExpenseService {
-  create(createExpenseDto: CreateExpenseDto) {
-    return 'This action adds a new expense';
+  constructor(
+    @InjectRepository(Expense)
+    private expenseRepository: Repository<Expense>,
+
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+  ) {}
+
+  async create({ description, date, value, userId }: CreateExpenseDto) {
+    const user = await this.userRepository
+      .findOneByOrFail({ id: userId })
+      .catch(() => {
+        throw new NotFoundException('Usuário não encontrado');
+      });
+
+    if (dayjs(date).isAfter(dayjs())) {
+      throw new BadRequestException('Data não pode ser futura!');
+    }
+
+    const expense = this.expenseRepository.create({
+      description,
+      date,
+      value,
+      user,
+    });
+
+    return this.expenseRepository.save(expense);
   }
 
-  findAll() {
-    return `This action returns all expense`;
+  async findAllByUser(userId: number) {
+    const user = await this.userRepository
+      .findOneByOrFail({ id: userId })
+      .catch(() => {
+        throw new NotFoundException('Usuário não encontrado');
+      });
+
+    return this.expenseRepository.findBy({ user });
   }
 
   findOne(id: number) {
-    return `This action returns a #${id} expense`;
+    return this.expenseRepository.findOneBy({ id });
   }
 
   update(id: number, updateExpenseDto: UpdateExpenseDto) {
-    return `This action updates a #${id} expense`;
+    return this.expenseRepository.update(id, updateExpenseDto);
   }
 
   remove(id: number) {
-    return `This action removes a #${id} expense`;
+    return this.expenseRepository.softDelete(id);
   }
 }
