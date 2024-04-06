@@ -24,7 +24,7 @@ export class ExpenseService {
     private userRepository: Repository<User>,
   ) {}
 
-  async create({ description, date, value, userId }: CreateExpenseDto) {
+  async create(userId: number, { description, date, value }: CreateExpenseDto) {
     const user = await this.userRepository
       .findOneByOrFail({ id: userId })
       .catch(() => {

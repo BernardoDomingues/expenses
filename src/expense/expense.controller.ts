@@ -12,15 +12,26 @@ import { ExpenseService } from './expense.service';
 import { CreateExpenseDto } from './dto/create-expense.dto';
 import { UpdateExpenseDto } from './dto/update-expense.dto';
 import { TokenGuard } from 'src/token.guard';
+import {
+  ApiBearerAuth,
+  ApiTags,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 
 @Controller('myExpenses/:userId')
+@ApiTags('Despesa')
+@ApiUnauthorizedResponse()
+@ApiBearerAuth('access-token')
 @UseGuards(TokenGuard)
 export class ExpenseController {
   constructor(private readonly expenseService: ExpenseService) {}
 
   @Post()
-  create(@Body() createExpenseDto: CreateExpenseDto) {
-    return this.expenseService.create(createExpenseDto);
+  create(
+    @Param('userId') userId: string,
+    @Body() createExpenseDto: CreateExpenseDto,
+  ) {
+    return this.expenseService.create(+userId, createExpenseDto);
   }
 
   @Get()
